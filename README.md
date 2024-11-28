@@ -1,2 +1,3 @@
 # Show-o-Turbo
-we release
+Model
+We have released the model
