@@ -15,6 +15,7 @@ import os
 import sys
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict,PeftModel
 import PIL
+
 # os.chdir('/data/xck/Show-o')
 # sys.path.append('/data/xck/Show-o')
 import shutil
@@ -1691,7 +1692,7 @@ def main(args):
     steps=args.num_train_inferences
     steps=32
     segment_num=4
-    t2i_ref_num=4
+    t2i_ref_num=8
 
     Tstep=seq_len/steps
     Tstep=math.ceil(Tstep)
@@ -1938,7 +1939,7 @@ def main(args):
                     # print("loss1:",loss1)
                     # print("loss2:",loss2)
                     if unknown_map_r.sum()>0:
-                        loss3=0.05*loss1+loss2
+                        loss3=0*loss1+loss2
                     else:
                         loss3=loss2
 
