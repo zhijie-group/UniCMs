@@ -3,14 +3,20 @@
 <img src="docs/title.png" width="166"> <!-- Replace with your logo -->
 <h3>Show-o Turbo: Towards Accelerated Unified Multimodal Understanding and Generation</h3>
 
-[Anonymous CVPR submission]
+Chenkai Xu<sup>1*</sup>, Xu Wang<sup>1*</sup>, Zhenyi Liao<sup>1</sup>, Yishun Li<sup>2</sup>, Tianqi Hou<sup>3</sup>, Zhijie Deng<sup>1†</sup>
+<br>
+<sup>1</sup>Shanghai Jiao Tong University  <sup>2</sup>Huawei  <sup>3</sup>Tongji University
+<br>
+<sup>*</sup>Equal contribution. <sup>†</sup>Corresponding author.
 
-[![ArXiv](https://img.shields.io/badge/ArXiv-PaperID12251-<COLOR>.svg)](https://arxiv.org/abs/your_paper_id)  [![Demo](https://img.shields.io/badge/Demo-ComingSoon-<COLOR>.svg)](https://your_demo_link) [![Discord](https://img.shields.io/badge/Discord-join-blueviolet?logo=discord&amp)](https://your_discord_link) 
+
+[![ArXiv](https://img.shields.io/badge/ArXiv-2502.05415-orange.svg)](https://arxiv.org/abs/2502.05415)  [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Show--o--Turbo--256-blue.svg)](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-256) [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Show--o--Turbo--512-blue.svg)](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-512)
 
 </div>
 
 ## News
 * **[2024-11-29]** We release a [256-resolution version of the weights](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-256) for Show-o Turbo on Hugging Face.
+* **[2025-2-12]** We release a [512-resolution version of the weights](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-512) for Show-o Turbo on Hugging Face.
 
   
 
@@ -30,14 +36,24 @@ Show-o Turbo builds upon Show-o to address its inefficiency issues in both image
 
 ## Results
 
-Show-o Turbo shows significant speedups in both text-to-image and image-to-text generation, while maintaining comparable performance to Show-o.
+Show-o Turbo shows significant speedups in both text-to-image and image-to-text generation, while maintaining comparable performance to Show-o.  **Particularly, we release both 256 and 512 resolution models.**
 
-* In text-to-image generation, it achieves performance close to that of Show-o at 8-step sampling at 4-step sampling, and surpasses Show-o at 4-step sampling at 2-step sampling.
+* In text-to-image generation, the **512-resolution Show-o Turbo** achieves performance better than that of Show-o at 8-step sampling at 4-step sampling, and surpasses Show-o at 4-step sampling at 2-step sampling.
+  <p align="center">
+  <img src="docs/t2i_result_512.png" width="777"> <!-- Charts and graphs showcasing results -->
+  </p>
+
+* In multimodal understanding tasks, the **512-resolution Show-o Turbo** is about 1.5 times faster without much performance loss.
+  <p align="center">
+  <img src="docs/mmu_result_512.png" width="777"> <!-- Charts and graphs showcasing results -->
+  </p>
+
+* In text-to-image generation, the **256-resolution Show-o Turbo** achieves performance close to that of Show-o at 8-step sampling at 4-step sampling, and surpasses Show-o at 4-step sampling at 2-step sampling.
   <p align="center">
   <img src="docs/t2i_result.png" width="777"> <!-- Charts and graphs showcasing results -->
   </p>
 
-* In multimodal understanding tasks, it is about 1.5 times faster without much performance loss.
+* In multimodal understanding tasks, the **256-resolution Show-o Turbo** is about 1.5 times faster without much performance loss.
   <p align="center">
   <img src="docs/mmu_result.png" width="777"> <!-- Charts and graphs showcasing results -->
   </p>
@@ -69,6 +85,9 @@ python3 inference_mmu.py config=configs/showo_turbo_mmu.yaml \
 python3 inference_t2i.py config=configs/showo_turbo_t2i.yaml \
 # ... Add your T2I inference options here 
 ```
+<p align="center">
+<img src="docs/t2i_512.png" style="max-width: 100%;"> <!-- Example output of T2I inference -->
+</p>
 
 <p align="center">
 <img src="docs/t2i.png" style="max-width: 100%;"> <!-- Example output of T2I inference -->
@@ -89,7 +108,7 @@ accelerate launch --config_file path/to/your/accelerate_config --main_process_po
 
 - [X] Release the inference and training code.
 - [X] Release the model weights.
-- [ ] Conduct further experiments with larger model sizes and datasets.
+- [X] Conduct further experiments with larger model sizes and datasets.
 
 ## Contributing
 
@@ -98,10 +117,20 @@ We welcome contributions to Show-o Turbo!  If you have ideas for new features or
 
 ## Citation
 
-**(Coming Soon)** Citation information will be provided here upon publication.
+```
+@misc{xu2025showoturboacceleratedunified,
+      title={Show-o Turbo: Towards Accelerated Unified Multimodal Understanding and Generation}, 
+      author={Chenkai Xu and Xu Wang and Zhenyi Liao and Yishun Li and Tianqi Hou and Zhijie Deng},
+      year={2025},
+      eprint={2502.05415},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2502.05415}, 
+}
+```
 
 
 ## Acknowledgments
 
 We would like to thank the authors of Show-o and the developers of the libraries and frameworks upon which Show-o Turbo is built, including  open-muse, Phi-1.5,  maskgit, taming-transformers, transformers, accelerate, diffusers. Thanks to all the authors for their great work.
-
+```
