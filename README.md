@@ -64,6 +64,8 @@ Show-o Turbo shows significant speedups in both text-to-image and image-to-text 
 
 First, set up the environment:
 ```bash
+conda create -n Show-o-Turbo python=3.8
+cd Show-o-Turbo
 pip3 install -r requirements.txt
 ```
 
@@ -72,8 +74,8 @@ pip3 install -r requirements.txt
 **Multimodal Understanding:**
 
 ```bash
-python3 inference_mmu.py config=configs/showo_turbo_mmu.yaml \
-# ... Add your MMU inference options here
+sh inference_mmu_512.sh
+sh inference_mmu_256.sh
 ```
 
 <p align="center">
@@ -84,8 +86,8 @@ python3 inference_mmu.py config=configs/showo_turbo_mmu.yaml \
 **Text-to-Image Generation:**
 
 ```bash
-python3 inference_t2i.py config=configs/showo_turbo_t2i.yaml \
-# ... Add your T2I inference options here 
+sh inference_t2i_512.sh
+sh inference_t2i_256.sh
 ```
 <p align="center">
 <img src="docs/t2i_512.png" style="max-width: 100%;"> <!-- Example output of T2I inference -->
@@ -99,10 +101,10 @@ python3 inference_t2i.py config=configs/showo_turbo_t2i.yaml \
 
 ## Training pipeline
 
-**(Coming Soon)** Details about the training process, including data preparation, scripts, and configuration options will be provided here upon release. Example command:
 
 ```bash
-accelerate launch --config_file path/to/your/accelerate_config --main_process_port=8888 training/train_showo_turbo.py config=configs/showo_turbo_training.yaml
+cd train_script
+sh train512.sh
 ```
 
 
