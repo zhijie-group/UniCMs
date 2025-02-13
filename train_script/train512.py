@@ -2,9 +2,6 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import gc
-# os.chdir("/home/wx/Show-o")
-sys.path.append("/liymai24/sjtu/xck/Show-o")
-sys.path[0],sys.path[-1]=sys.path[-1],sys.path[0]
 from accelerate.utils import DistributedType, set_seed
 from lightning.pytorch.utilities import CombinedLoader
 import os
@@ -16,8 +13,6 @@ import sys
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict,PeftModel
 import PIL
 
-# os.chdir('/data/xck/Show-o')
-# sys.path.append('/data/xck/Show-o')
 import shutil
 from pathlib import Path
 from datasets import load_dataset
@@ -68,13 +63,36 @@ from torchvision import transforms
 from deepspeed.ops.adam import FusedAdam
 os.environ["WANDB_MODE"] = "offline"
 
-    
+# --- Hyperparameters and File Paths ---
+TEXT_DATASET_PATH = "dataset/tiiuae/falcon-refinedweb/data"
+MMU_DATASET_PATH = "dataset/llava_v1_5_mix665k.json"
+MMU_IMAGE_PATH = "dataset/llava/"
+CONFIG_FILE_PATH = "configs/showo_512.yaml"
+T2I_DATASET_PATH = "dataset/coco_train_fil.json"
+IMAGE_RESOLUTION = 512
+TEXT_MAX_LENGTH = 8000
+MMU_SEG_NUM = 4
+T2I_SEG_NUM = 8
+STEPS_PER_SEGMENT = 32
+GUIDANCE_SCALE_DEFAULT = 10
+MAX_NEW_TOKENS = 16
+MAX_NEW_SEQ_LEN = 512
+IGNORE_LENGTH = MAX_SEQ_LENGTH + 4
+IGNORE_ID = -100
+EMA_ALPHA = 0.9
+LOSS_LM_WEIGHT = 0.1
+LOSS_MMU_WEIGHT = 0.5
+SAMPLE_STEPS = 4
+TEACHER_SAMPLE_STEPS = 16
+REPEAT_NGRAM_SIZE = 10
+
+
 class CustomDataset(Dataset):#继承data.Dataset
     def __init__(self,t2i_path):
         with open(t2i_path,"r",encoding="utf-8") as f:
             self.data=json.load(f)
-        self.resolution=512
-        def transform(example, resolution=512, normalize=True):
+        self.resolution=IMAGE_RESOLUTION
+        def transform(example, resolution=self.resolution, normalize=True):
             image=example["image"]
             image = transforms.Resize(resolution, interpolation=transforms.InterpolationMode.BICUBIC)(image)
             image = transforms.CenterCrop((resolution, resolution))(image)
@@ -94,7 +112,7 @@ class CustomDataset(Dataset):#继承data.Dataset
     def __len__(self):
         return len(self.data)
 class TextDataset(Dataset):
-    def __init__(self,path="/liymai24/sjtu/wx/dataset/tiiuae/falcon-refinedweb/data",max_length=8000):
+    def __init__(self,path=TEXT_DATASET_PATH,max_length=TEXT_MAX_LENGTH):
         self.ds = load_dataset("parquet",data_dir=path)["train"]
         self.max_length=max_length
         def transform(example):
@@ -115,10 +133,10 @@ class TextDataset(Dataset):
     def __len__(self):
         return len(self.ds)
 class MMUDataset(Dataset):
-    def __init__(self,path="/liymai24/sjtu/xck/dataset/llava_v1_5_mix665k.json",image_path="/liymai24/sjtu/xck/dataset/llava/"):
+    def __init__(self,path=MMU_DATASET_PATH,image_path=MMU_IMAGE_PATH):
         with open(path,"r",encoding="utf-8") as f:
             self.data=json.load(f)
-        self.resolution=512
+        self.resolution=IMAGE_RESOLUTION
         self.image_path=image_path
         def transform(example):
             # resize image
@@ -135,26 +153,26 @@ class MMUDataset(Dataset):
     def __getitem__(self, index):
         ori_idx = index#
         while True:
-                
-                d = self.data[ori_idx]
-                try:
-                    idx=random.randint(0,len(d["conversations"])//2-1)
-                    prompt = d["conversations"][2*idx]["value"]
-                    answer = d["conversations"][2*idx+1]["value"]
-                    image_path = self.image_path + d["image"]
 
-                    # Load the image
-                    image_ori = Image.open(image_path).convert("RGB")
-                    
-                    # Prepare the example
-                    example = {"text": prompt, "image": image_ori,"answer":answer}
-                    example = self.transform(example)
-                    return example
+            d = self.data[ori_idx]
+            try:
+                idx=random.randint(0,len(d["conversations"])//2-1)
+                prompt = d["conversations"][2*idx]["value"]
+                answer = d["conversations"][2*idx+1]["value"]
+                image_path = self.image_path + d["image"]
 
-                except (KeyError, FileNotFoundError, OSError, PIL.UnidentifiedImageError) as e:
-                    # print(f"Error loading data item {d}: {e}")
-                    ori_idx=random.randint(0, len(self.data) - 1)
-                    continue  # Skip to the next data item if there's an erro
+                # Load the image
+                image_ori = Image.open(image_path).convert("RGB")
+
+                # Prepare the example
+                example = {"text": prompt, "image": image_ori,"answer":answer}
+                example = self.transform(example)
+                return example
+
+            except (KeyError, FileNotFoundError, OSError, PIL.UnidentifiedImageError) as e:
+                # print(f"Error loading data item {d}: {e}")
+                ori_idx=random.randint(0, len(self.data) - 1)
+                continue  # Skip to the next data item if there's an erro
     def __len__(self):
         return len(self.data)
 def create_dataloader(dataset:Dataset,per_gpu_batch_size,num_workers,num_train_examples,global_batch_size):
@@ -365,7 +383,7 @@ def parse_args():
         help="Proportion of image prompts to be replaced with empty strings. Defaults to 0 (no prompt replacement).",
     )
     # ----Latent Consistency Distillation (LCD) Specific Arguments----
-    
+
     parser.add_argument(
         "--num_ddim_timesteps",
         type=int,
@@ -537,7 +555,7 @@ def teacher_denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_
                 uncond_logits.to(accelerator.device)
                 # logits = uncond_logits + guidance_scale * (cond_logits - uncond_logits)
                 # it seems that muse has different cfg setting
-                config.training.guidance_scale=10
+                # config.training.guidance_scale=10
                 logits = (1 + config.training.guidance_scale) * cond_logits - config.training.guidance_scale * uncond_logits
                 logits = logits[:, -(seq_len + 1):-1, config.model.showo.llm_vocab_size + 10:-1]
             else:
@@ -560,7 +578,7 @@ def teacher_denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_
             sampled_ids = torch.where(unknown_map.to(accelerator.device), sampled_ids.to(accelerator.device), input_ids_minus_lm_vocab_size)
             # Defines the mask ratio for the next round. The number to mask out is
             # determined by mask_ratio * unknown_number_in_the_beginning.
-            
+
             # print(ratio)
             # print(noise_schedule)
             mask_ratio = noise_schedule(torch.tensor(ratio))
@@ -591,12 +609,12 @@ def teacher_denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_
                                                             sampled_ids + config.model.showo.llm_vocab_size + 10)
             input_ids_minus_lm_vocab_size = torch.where(masking, mask_token_id, sampled_ids)
             if return_logits:
-                return input_ids, input_ids_minus_lm_vocab_size, temperature,unknown_map,masking, sampled 
+                return input_ids, input_ids_minus_lm_vocab_size, temperature,unknown_map,masking, sampled
             elif return_sampled_ids:
-                return input_ids, input_ids_minus_lm_vocab_size, temperature, sampled_ids,unknown_map,masking, sampled 
+                return input_ids, input_ids_minus_lm_vocab_size, temperature, sampled_ids,unknown_map,masking, sampled
             else:
                 return input_ids, input_ids_minus_lm_vocab_size, temperature
-    
+
 
 def denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_ids, uncond_prefix,
             attention_mask, config,mask_token_id,seq_len,generator,noise_schedule,ratio,temperature,
@@ -629,8 +647,8 @@ def denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_ids, unc
     # cond_probs = cond_logits.softmax(dim=-1)
     logits = logits.reshape(-1, logits.size(-1))
     # print(generator.get_state())
-    
-    
+
+
     # print(generator.get_state())
     # sampled_ids = torch.multinomial(sampled, 1, generator=generator)[:, 0].view(*logits.shape[:-1])
     sampled_ids = torch.argmax(sampled, dim=-1).view(*logits.shape[:-1])
@@ -639,7 +657,7 @@ def denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_ids, unc
     sampled_ids = torch.where(unknown_map, sampled_ids, input_ids_minus_lm_vocab_size)
     # Defines the mask ratio for the next round. The number to mask out is
     # determined by mask_ratio * unknown_number_in_the_beginning.
-    
+
     # print(ratio)
     # print(noise_schedule)
     mask_ratio = noise_schedule(torch.tensor(ratio))
@@ -651,7 +669,7 @@ def denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_ids, unc
     selected_probs = torch.where(unknown_map, selected_probs, torch.finfo(selected_probs.dtype).max)
     # Gets mask lens for each sample in the batch according to the mask ratio.
     mask_len = (seq_len * mask_ratio).floor().unsqueeze(0).to(logits.device)
-    
+
     # Keeps at least one of prediction in this round and also masks out at least
     # one and for the next iteration
     mask_len = torch.max(
@@ -670,7 +688,7 @@ def denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_ids, unc
         return sampled,masking
 
     if return_logits:
-        return unknown_map,masking, sampled, logits 
+        return unknown_map,masking, sampled, logits
     elif return_sampled_ids:
         print("mask总数",masking.sum())
         mask_probs=sampled[:,-1]
@@ -683,8 +701,8 @@ def denoise(model,input_ids, input_ids_minus_lm_vocab_size,uncond_input_ids, unc
         return input_ids, input_ids_minus_lm_vocab_size
 
 
-def sample_and_save_image(uni_prompting,step, sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps=4):
-    gen_token_ids=sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_model, model, 
+def sample_and_save_image(uni_prompting,step, sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps=SAMPLE_STEPS):
+    gen_token_ids=sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_model, model,
                             mask_schedule,mask_token_id, sample_steps=sample_steps)
 
     from PIL import Image
@@ -696,7 +714,7 @@ def sample_and_save_image(uni_prompting,step, sample_prompt, vq_model, model, ma
     images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
     pil_images = [Image.fromarray(image) for image in images]
 
-    output_file=args.image_dir+ f'/sample_step_{step}.png'
+    output_file=os.path.join(args.image_dir, f'sample_step_{step}.png')
     pil_images[0].save(output_file)
 
 def sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps):
@@ -736,36 +754,36 @@ def sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_model, m
     uncond_prefix=None
 
     temperature=config.training.get("generation_temperature", 1.0)
-    
+
 
     input_ids_minus_lm_vocab_size = input_ids[:, -(seq_len + 1):-1].clone()
     input_ids_minus_lm_vocab_size = torch.where(input_ids_minus_lm_vocab_size == mask_token_id,
                                 mask_token_id,
                                 input_ids_minus_lm_vocab_size - config.model.showo.llm_vocab_size - 10)
-    
+
 
     if uncond_input_ids is not None:
         uncond_prefix = uncond_input_ids[:, :config.dataset.preprocessing.max_seq_length + 1]
-    
-    
+
+
     timesteps = torch.linspace(sample_steps / sample_steps, 1 / sample_steps, sample_steps, device=accelerator.device)
-    
+
     for t_ in tqdm(timesteps, desc="Sampling steps"):
         s_ = t_ - 1 / sample_steps
         ratio_s=1-s_
         with torch.no_grad():
             # Compute f(z_t, t)
-            
+
             input_ids, input_ids_minus_lm_vocab_size, temperature, sampled_ids= denoise(model,
-                    input_ids, input_ids_minus_lm_vocab_size, 
+                    input_ids, input_ids_minus_lm_vocab_size,
                     uncond_input_ids, uncond_prefix,attention_mask, config, mask_token_id,seq_len,
                     generator,mask_schedule, ratio_s,temperature,return_logits=False,return_sampled_ids=True)
-            
+
     return sampled_ids
 
 
-def teacher_sample_and_save_image(uni_prompting,step, sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps=18):
-    gen_token_ids=teacher_sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_model, model, 
+def teacher_sample_and_save_image(uni_prompting,step, sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps=TEACHER_SAMPLE_STEPS):
+    gen_token_ids=teacher_sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_model, model,
                             mask_schedule,mask_token_id, sample_steps=sample_steps)
 
     from PIL import Image
@@ -777,7 +795,7 @@ def teacher_sample_and_save_image(uni_prompting,step, sample_prompt, vq_model, m
     images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
     pil_images = [Image.fromarray(image) for image in images]
 
-    output_file=args.image_dir+ f'/teacher_sample_step_{step}.png'
+    output_file=os.path.join(args.image_dir, f'teacher_sample_step_{step}.png')
     pil_images[0].save(output_file)
 
 def teacher_sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps):
@@ -809,32 +827,32 @@ def teacher_sampling_from_multistep_consistency(uni_prompting,sample_prompt, vq_
         uncond_input_ids = None
 
     temperature=config.training.get("generation_temperature", 1.0)
-    
+
 
     input_ids_minus_lm_vocab_size = input_ids[:, -(seq_len + 1):-1].clone()
     input_ids_minus_lm_vocab_size = torch.where(input_ids_minus_lm_vocab_size == mask_token_id,
                                 mask_token_id,
                                 input_ids_minus_lm_vocab_size - config.model.showo.llm_vocab_size - 10)
-    
+
 
     if uncond_input_ids is not None:
         uncond_prefix = uncond_input_ids[:, :config.dataset.preprocessing.max_seq_length + 1]
-    
-    
+
+
     # 2. Define the timesteps for the loop
     timesteps = torch.linspace(sample_steps / sample_steps, 1 / sample_steps, sample_steps, device=accelerator.device)
-    
+
     for t_ in tqdm(timesteps, desc="Sampling steps"):
         s_ = t_ - 1 / sample_steps
         ratio_s=1-s_
         with torch.no_grad():
             # Compute f(z_t, t)
-            
+
             input_ids, input_ids_minus_lm_vocab_size, temperature, sampled_ids= teacher_denoise(model,
-                    input_ids, input_ids_minus_lm_vocab_size, 
-                    uncond_input_ids, uncond_prefix,attention_mask, config, 
+                    input_ids, input_ids_minus_lm_vocab_size,
+                    uncond_input_ids, uncond_prefix,attention_mask, config,
                     generator, ratio_s, mask_token_id,mask_schedule,seq_len,temperature,return_sampled_ids=True)
-      
+
     return sampled_ids
 
 
@@ -857,7 +875,6 @@ def generate_intermediate_t_vectors(steps,step,t,bsz,device,seq_len):
 
 
 
-    
 
 args = parse_args()
 # teacher_model = PixArtmodel2DModel.from_pretrained(args.pretrained_teacher_model, subfolder="model")
@@ -892,7 +909,7 @@ def get_vq_model_class(model_type):
     else:
         raise ValueError(f"model_type {model_type} not supported.")
 
-config_file_path = "/liymai24/sjtu/xck/Show-o/configs/showo_demo_512x512.yaml"
+config_file_path = CONFIG_FILE_PATH
 config = OmegaConf.load(config_file_path)
 config.mode='t2i'
 
@@ -925,7 +942,7 @@ import random
 def mask_or_random_replace_tokens(image_tokens, mask_id, config, mask_schedule, timestep,is_train=True):
     batch_size, seq_len = image_tokens.shape
 
-    
+
     # Sample a random timestep for each image
     timesteps = torch.tensor([timestep for i in range(batch_size)],dtype=torch.float)
     # Sample a random mask probability for each image using timestep and cosine schedule
@@ -1007,7 +1024,7 @@ def prepare_inputs_and_labels(
         timestep,
         min_masking_rate: float = 0.0,
         is_train: bool = True,
-        
+
 ):
     # print(vq_model.device,pixel_values_or_image_ids.device)
     pixel_values_or_image_ids=pixel_values_or_image_ids.to(torch.float16)
@@ -1045,7 +1062,7 @@ def create_attention_mask_for_mmu(sequence, eoi_id=128258, return_inverse_mask=T
         return inverted_mask
     else:
         return causal_mask
-    
+
 
 def calculate_lm_loss(model, input_ids,input_embeddings, attention_mask, labels, label_smoothing,max_seq_length):
     input_ids=input_ids.to(model.device)
@@ -1067,8 +1084,8 @@ def calculate_lm_loss(model, input_ids,input_embeddings, attention_mask, labels,
 
 
 
-def global_image_process(teacher_model,model,ref_num, input_ids,input_ids_minus_lm_vocab_size,uncond_input_ids, uncond_prefix,attention_mask,attention_mask_student, config, 
-                    generator,mask_token_id,mask_schedule,seq_len,temperature,step,sample_steps=32,num=8193):
+def global_image_process(teacher_model,model,ref_num, input_ids,input_ids_minus_lm_vocab_size,uncond_input_ids, uncond_prefix,attention_mask,attention_mask_student, config,
+                    generator,mask_token_id,mask_schedule,seq_len,temperature,step,sample_steps=STEPS_PER_SEGMENT,num=8193):
     # 2. Define the timesteps for the loop
     timesteps = torch.linspace(sample_steps / sample_steps, 1 / sample_steps, sample_steps, device=accelerator.device)
     label_step=torch.linspace(sample_steps/ref_num, sample_steps, ref_num, device=accelerator.device)
@@ -1092,16 +1109,16 @@ def global_image_process(teacher_model,model,ref_num, input_ids,input_ids_minus_
             input_ids_minus_lm_vocab_size_student=input_ids_minus_lm_vocab_size.clone()
 
             input_ids, input_ids_minus_lm_vocab_size, temperature,sampled_ids,unknown_map,teacher_masking, teacher_sampled = teacher_denoise(teacher_model,
-                    input_ids, input_ids_minus_lm_vocab_size, 
-                    uncond_input_ids, uncond_prefix,attention_mask, config, 
+                    input_ids, input_ids_minus_lm_vocab_size,
+                    uncond_input_ids, uncond_prefix,attention_mask, config,
                     generator, ratio_s, mask_token_id,mask_schedule,seq_len,0,return_sampled_ids=True)
-            
+
             teacher_sampled=teacher_sampled.reshape(-1,teacher_sampled.shape[-1])
             unknown_map=unknown_map.reshape(-1)
             known_map=~unknown_map
             teacher_sampled=teacher_sampled.to(unknown_map.device)
             teacher_total_sampled=teacher_sampled*unknown_map.unsqueeze(-1)+teacher_total_sampled*known_map.unsqueeze(-1)
-            
+
 
             sampled,masking=denoise(model,input_ids_student, input_ids_minus_lm_vocab_size_student,uncond_input_ids, uncond_prefix,
                 attention_mask_student, config,mask_token_id,seq_len,generator,mask_schedule,ratio_s,0,return_sampled=True)
@@ -1119,11 +1136,10 @@ def global_image_process(teacher_model,model,ref_num, input_ids,input_ids_minus_
                 labels.append((total_sampled,teacher_total_sampled,unknown_map))
                 # if len(labels)==label_id+1:
                 #     break
-                
+
     labels.append((total_sampled,teacher_total_sampled,unknown_map))
 
-        
-    
+
     label=labels[label_id]
     teacher_label=sampled_ids.reshape(-1)
 
@@ -1134,7 +1150,7 @@ def global_image_process(teacher_model,model,ref_num, input_ids,input_ids_minus_
 
     return label,teacher_label,global_image_step,global_id_step
 
-def detect_repetitive_patterns(tokenizer, prompt_ids, repeat_ngram_size):
+def detect_repetitive_patterns(tokenizer, prompt_ids, repeat_ngram_size=REPEAT_NGRAM_SIZE):
 
     if len(prompt_ids.shape)==1:
         prompt_ids = prompt_ids
@@ -1165,7 +1181,7 @@ def get_jacobian_trajectory(
     tokenizer,
     input_ids,
     teacher_mask_type,
-    max_new_tokens
+    max_new_tokens=MAX_NEW_TOKENS
     ):
 
     bsz = input_ids.shape[0]
@@ -1186,7 +1202,7 @@ def get_jacobian_trajectory(
         tokens[i, : prompt_len[i]] = torch.tensor(input_ids[i][: prompt_len[i]], dtype=torch.long, device="cuda")
 
 
-    
+
     trajectory = []
     logits_trajectory = []
     next_generation = tokens
@@ -1196,7 +1212,7 @@ def get_jacobian_trajectory(
     trajectory.append(tokens)
     itr=0
     while True:
-        
+
         current_generation = next_generation
         # current_text=uni_prompting.text_tokenizer.batch_decode(current_generation, skip_special_tokens=True)
         # print("current_text:",current_text)
@@ -1218,9 +1234,9 @@ def get_jacobian_trajectory(
 
         trajectory.append(next_generation)
         if torch.all(torch.eq(next_generation, current_generation)).item():
-            
+
             # eos_reached = len(torch.where(trajectory[-1][0] == tokenizer.eos_token_id)[0])>0
-            # for i in range(len(trajectory[-1][0])): 
+            # for i in range(len(trajectory[-1][0])):
             #     if trajectory[-1][0][i]==tokenizer.eos_token_id:
             #         print("eos_index:",i)
             # print("idx:",torch.where(trajectory[-1][0] == tokenizer.eos_token_id))
@@ -1248,7 +1264,7 @@ def preprocess_distill_data(
     model: str,
     labels_ids=None,
 ) -> Dict:
-    
+
     jacobian_trajectory_ids = []
     # only take batch size 1 for now
     # TODO: support bsz > 1 from the generation script. for now, only prompt ids is in (bsz, seq_len)
@@ -1268,7 +1284,7 @@ def preprocess_distill_data(
             trajectory_ids = torch.cat((jacobian_prompt_ids[0], answer_ids), dim=-1)
         # print(trajectory_ids.shape) # torch.Size([228])
         jacobian_trajectory_ids.append(trajectory_ids.unsqueeze(0))
-   
+
     if labels_ids:
         return dict(
             jacobian_trajectory=jacobian_trajectory_ids,
@@ -1314,7 +1330,7 @@ def calculate_cllm_loss(last_jacobian, last_attention_mask, pick_jacobian, pick_
                     last_logits[..., :-1, :].clone().detach().float(),
                     output_mask.to(pick_logits.device)
         )
-    
+
     label_logits=labels_logits.view(-1, labels_logits.size(-1))
     ignore_labels=ignore_labels.view(-1)
     loss_ar= F.cross_entropy(label_logits[:-1], ignore_labels[1:], ignore_index=-100)
@@ -1355,7 +1371,7 @@ def main(args):
             os.makedirs(args.output_dir, exist_ok=True)
         if args.image_dir is not None:
             os.makedirs(args.image_dir, exist_ok=True)
-            
+
         if args.push_to_hub:
             create_repo(
                 repo_id=args.hub_model_id or Path(args.output_dir).name,
@@ -1366,11 +1382,11 @@ def main(args):
 
 
     weight_dtype = torch.float16
-    
+
     # print("vq_model")
     # os.system("gpustat")
-    
-    
+
+
     # teacher_model=distributed_model("teacher_transformer",weight_dtype,config,args)
     teacher_model = Showo.from_pretrained(args.pretrained_teacher_model)
     # print(os.system("gpustat"))
@@ -1458,7 +1474,7 @@ def main(args):
         raise ValueError(
             f"Controlnet loaded as datatype {accelerator.unwrap_model(model).dtype}. {low_precision_error_string}"
         )
-    
+
     # print(vae.device)
     # os.system("gpustat")
     # teacher_model=teacher_model.to(weight_dtype).to(device)
@@ -1469,7 +1485,7 @@ def main(args):
         mask_schedule = get_mask_chedule(schedule, **args)
     else:
         mask_schedule = get_mask_chedule(config.training.get("mask_schedule", "cosine"))
-    
+
     # vae=vae.to(weight_dtype).to(accelerator.device)
     # text_encoder.to(accelerator.device)
     # print(model.device,text_encoder.device,vae.device)
@@ -1518,15 +1534,15 @@ def main(args):
             for i in range(len(models)):
                 # pop models so that they are not loaded again
                 model = models.pop()
-                
+
                 print("input_dir",input_dir)
                 # load diffusers style into model
-                
+
                 load_model = Showo.from_pretrained("/data/xck/models/showo/show-o")
                 peft_config = LoraConfig.from_pretrained(input_dir)
-                load_model = PeftModel.from_pretrained(load_model,input_dir, config=peft_config)  
+                load_model = PeftModel.from_pretrained(load_model,input_dir, config=peft_config)
                 model.register_to_config(**load_model.config)
- 
+
                 model.load_state_dict(load_model.state_dict())
                 del load_model
 
@@ -1563,7 +1579,7 @@ def main(args):
     mmu_dataset=MMUDataset()
     print("t2i")
     dataset = CustomDataset(
-        t2i_path=args.train_shards_path_or_url,
+        t2i_path=T2I_DATASET_PATH,
     )
 
     print("text_loader")
@@ -1603,14 +1619,14 @@ def main(args):
 
     # Prepare everything with our `accelerator`.
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
-    
+
     total_batch_size = (
             args.train_batch_size
             * accelerator.num_processes * config.training.gradient_accumulation_steps
     )
 
 
-    
+
     model ,optimizer, lr_scheduler ,combined_dataloader= accelerator.prepare(model ,optimizer, lr_scheduler,combined_dataloader)
     # os.system("gpustat")
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
@@ -1663,7 +1679,7 @@ def main(args):
 
             # for param_group in optimizer.param_groups:
             #     param_group['lr'] = args.learning_rate
-                
+
             initial_global_step = global_step
             first_epoch = global_step // num_update_steps_per_epoch
     else:
@@ -1686,13 +1702,13 @@ def main(args):
     if config.get("validation_prompts_file", None) is not None:
         config.dataset.params.validation_prompts_file = config.validation_prompts_file
     config.training.batch_size = args.train_batch_size
-    config.training.guidance_scale = 1.75
+    config.training.guidance_scale = GUIDANCE_SCALE_DEFAULT
 
-    
+
     steps=args.num_train_inferences
-    steps=32
-    segment_num=4
-    t2i_ref_num=8
+    steps=STEPS_PER_SEGMENT
+    segment_num=MMU_SEG_NUM
+    t2i_ref_num=T2I_SEG_NUM
 
     Tstep=seq_len/steps
     Tstep=math.ceil(Tstep)
@@ -1705,20 +1721,20 @@ def main(args):
     loss2_ema=0.0
     loss3_ema=0.0
     loss_mmu_ema=0.0
-    ema_alpha=0.9
+    ema_alpha=EMA_ALPHA
     step_losses = {}
     num_pred_dict = {}
     num_hope_dict = {}
     acc_dict = {}
-    ignore_len=seq_len+4
-    ignore_id=-100
-    max_new_tokens=16
-    max_new_seq_len=512
+    ignore_len=IGNORE_LENGTH
+    ignore_id=IGNORE_ID
+    max_new_tokens=MAX_NEW_TOKENS
+    max_new_seq_len=MAX_NEW_SEQ_LEN
     use_gt=False
     mask_type=model.module.showo.model.embed_tokens.weight.dtype
     teacher_mask_type=teacher_model.showo.model.embed_tokens.weight.dtype
 
-    
+
     # os.system("gpustat")
     for batch, batch_idx, dataloader_idx in combined_dataloader:
         try:
@@ -1772,7 +1788,7 @@ def main(args):
 
                     with torch.no_grad():
                         jacobian_trajectory_ids, teacher_logits, eeos_reached = get_jacobian_trajectory(teacher_model, tokenizer, inputs, teacher_mask_type, max_new_tokens)
-                    
+
                     dic["answer_trajectory_ids"] = []
                     for _, id in enumerate(jacobian_trajectory_ids):
                         # only support batch size=1 now
@@ -1783,11 +1799,11 @@ def main(args):
                     iitr+=1
 
 
-                    low_data=detect_repetitive_patterns(tokenizer, prompt_ids=inputs, repeat_ngram_size=10)
+                    low_data=detect_repetitive_patterns(tokenizer, prompt_ids=inputs, repeat_ngram_size=REPEAT_NGRAM_SIZE)
                     if low_data:
                         print("low quality data is detected")
                         break
-            
+
                     train_d = preprocess_distill_data(dic["prompt_ids"],
                             dic["answer_trajectory_ids"],
                             dic["teacher_output_ids"],
@@ -1798,7 +1814,7 @@ def main(args):
                     jacobian_trajectory = train_d["jacobian_trajectory"]
 
 
-                    
+
                     # print("len(jacobian_trajectory)",len(jacobian_trajectory))
                     segment_length = round(len(jacobian_trajectory) / segment_num)
                     segments = [jacobian_trajectory[i:i + segment_length] for i in range(0, len(jacobian_trajectory), segment_length)]
@@ -1810,14 +1826,14 @@ def main(args):
                     # 找到段末尾对应的索引
                     end_index_of_segment = (segment_index + 1) * segment_length - 1
                     if end_index_of_segment >= len(jacobian_trajectory):
-                        end_index_of_segment = len(jacobian_trajectory) - 1 
+                        end_index_of_segment = len(jacobian_trajectory) - 1
 
 
                     last_jacobian = jacobian_trajectory[end_index_of_segment].clone().detach()
                     last_attention_mask = create_attention_mask_for_mmu(last_jacobian.to(device),
                                                                 eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
                     last_attention_mask=last_attention_mask.to(mask_type)
-                    
+
                     pick_jacobian = jacobian_trajectory[i].clone().detach()
                     pick_attention_mask = create_attention_mask_for_mmu(pick_jacobian.to(device),
                                                                 eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
@@ -1835,11 +1851,11 @@ def main(args):
 
                     labels = train_d['teacher_output_ids']
 
-                    
+
                     labels=labels.unsqueeze(0)
                     labels = torch.tensor(labels).to(model.device)
                     ignore_labels=labels.clone().detach()
-                    ignore_len=seq_len+4
+                    ignore_len=IGNORE_LENGTH
                     ignore_labels[0][:ignore_len] = ignore_id
 
                     labels_attention_mask = create_attention_mask_for_mmu(labels.to(device),
@@ -1849,7 +1865,6 @@ def main(args):
 
 
 
-                
                     # Get the batch corresponding to t2i_index
                     # try:
                     #     batch = next(data_iter)
@@ -1862,7 +1877,7 @@ def main(args):
 
                     step = torch.randint(0, steps, (1,), device=device).long()
                     # Compute initial tstep and t
-                    tstep = step.float() / steps 
+                    tstep = step.float() / steps
                     # nrel = torch.randint(0, Tstep, (1,), device=device).long()
 
 
@@ -1896,7 +1911,7 @@ def main(args):
                     input_ids_minus_lm_vocab_size = torch.where(input_ids_minus_lm_vocab_size == mask_token_id,
                                                 mask_token_id,
                                                 input_ids_minus_lm_vocab_size - config.model.showo.llm_vocab_size - 10)
-                    
+
 
                     if uncond_input_ids is not None:
                         uncond_prefix = uncond_input_ids[:, :config.dataset.preprocessing.max_seq_length + 1]
@@ -1910,15 +1925,15 @@ def main(args):
                                                     rm_pad_in_image=True)
                     uncond_input_ids_student = None
 
-                    label_mask,teacher_label,input_ids_minus_lm_vocab_size_t,input_ids_t=global_image_process(teacher_model,model,t2i_ref_num,input_ids, input_ids_minus_lm_vocab_size, 
-                            uncond_input_ids, uncond_prefix,attention_mask,attention_mask_student, config, 
+                    label_mask,teacher_label,input_ids_minus_lm_vocab_size_t,input_ids_t=global_image_process(teacher_model,model,t2i_ref_num,input_ids, input_ids_minus_lm_vocab_size,
+                            uncond_input_ids, uncond_prefix,attention_mask,attention_mask_student, config,
                             generator ,mask_token_id,mask_schedule,seq_len,temperature,step,sample_steps=steps)
                     del teacher_label
                     sampled_label,teacher_sampled_label,unknown_map_r=label_mask
                     torch.cuda.empty_cache()
 
 
-                    
+
 
                     unknown_map_t,masking_pred, output_sampled,cond_logits = denoise(model,input_ids_t, input_ids_minus_lm_vocab_size_t,uncond_input_ids, uncond_input_ids_student,
                         attention_mask_student, config,mask_token_id,seq_len,generator,mask_schedule,1,0,return_logits=True)
@@ -1944,7 +1959,7 @@ def main(args):
                         loss3=loss2
 
 
-                    
+
                     texts_lm = batch_lm["text"]
                     input_ids_lm, _, labels_lm = uni_prompting((texts_lm, input_ids.shape[-1]), 'lm')
                     attention_mask_lm = create_attention_mask_predict_next(input_ids_lm.to(model.device),
@@ -1963,7 +1978,7 @@ def main(args):
                     )
 
                     del jacobian_trajectory_ids, teacher_logits, train_d, jacobian_trajectory, segments, segment_index, end_index_of_segment, last_jacobian, last_attention_mask, pick_jacobian, pick_attention_mask, output_mask, labels, ignore_labels, labels_attention_mask
-                    loss=loss3+0.1*loss_lm+0.5*loss_mmu
+                    loss=loss3+LOSS_LM_WEIGHT*loss_lm+LOSS_MMU_WEIGHT*loss_mmu
                     # accelerator.print(loss_lm)
                     if accelerator.is_main_process:
                         step_value = step.item()
@@ -1975,7 +1990,7 @@ def main(args):
 
 
                         step_losses[step_value].append((global_step, loss3.item(), loss_lm.item(), loss_mmu.item()))
-                    
+
                     torch.cuda.empty_cache()
 
                     accelerator.backward(loss)
@@ -1987,7 +2002,8 @@ def main(args):
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
                     torch.cuda.empty_cache()
-                
+
+
 
 
                     # Checks if the accelerator has performed an optimization step behind the scenes
@@ -2001,10 +2017,10 @@ def main(args):
                             if global_step % args.checkpointing_steps == 0:
                                 # sample_prompt = 'a dog playing in the snow'
                                 sample_prompt ="Two vespas parked next to a light post."
-                                
-                                sample_and_save_image(uni_prompting,global_step, sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps=4)
 
-                                save_dir1=args.image_dir+ f'/loss_per_step_{global_step}'
+                                sample_and_save_image(uni_prompting,global_step, sample_prompt, vq_model, model, mask_schedule, mask_token_id,sample_steps=SAMPLE_STEPS)
+
+                                save_dir1=os.path.join(args.image_dir, f'loss_per_step_{global_step}')
                                 if save_dir1 is not None:
                                     os.makedirs(save_dir1, exist_ok=True)
                                 # save_dir2=args.image_dir+ f'/num_pred_vs_num_hope_{global_step}'
@@ -2021,7 +2037,7 @@ def main(args):
                                     loss_values = [item[1] for item in step_losses[step_value]]
                                     loss_lm_values = [item[2] for item in step_losses[step_value]]
                                     loss_mmu_values = [item[3] for item in step_losses[step_value]]
-                                    
+
 
                                     with open(loss_jsonl_path, 'a') as f:
                                         json.dump({"step": step_value, "iterations": iterations_loss, "losses": loss_values}, f)  # Save all at once
@@ -2029,12 +2045,12 @@ def main(args):
 
                                     # Plot loss3 over iterations for this step
                                     plt.figure()
-                                    plt.plot(iterations_loss, loss_values, label='Loss3')   
+                                    plt.plot(iterations_loss, loss_values, label='Loss3')
                                     plt.xlabel('Iteration')
                                     plt.ylabel('Loss')
                                     plt.title(f'Losses over Iterations for Step {step_value}')
                                     plt.legend()  # Add legend to distinguish the different losses
-                                    plt.savefig(save_dir1 + f'/loss_per_step_{step_value}.png')
+                                    plt.savefig(os.path.join(save_dir1, f'loss_per_step_{step_value}.png'))
                                     plt.close()
 
                                     plt.figure()
@@ -2043,7 +2059,7 @@ def main(args):
                                     plt.ylabel('Loss')
                                     plt.title(f'Loss_lm over Iterations for Step {step_value}')
                                     plt.legend()
-                                    plt.savefig(save_dir1 + f'/loss_lm_per_step_{step_value}.png')
+                                    plt.savefig(os.path.join(save_dir1, f'loss_lm_per_step_{step_value}.png'))
                                     plt.close()
 
                                     plt.figure()
@@ -2052,7 +2068,7 @@ def main(args):
                                     plt.ylabel('Loss')
                                     plt.title(f'Loss_mmu over Iterations for Step {step_value}')
                                     plt.legend()
-                                    plt.savefig(save_dir1 + f'/loss_mmu_per_step_{step_value}.png')
+                                    plt.savefig(os.path.join(save_dir1, f'loss_mmu_per_step_{step_value}.png'))
                                     plt.close()
 
 
@@ -2069,7 +2085,7 @@ def main(args):
                                     # plt.savefig(save_dir2+ f'/acc_unknown_vs_acc_known_{step_value}.png')
                                     # plt.close()
 
-                                
+
                                 # teacher_sample_and_save_image(uni_prompting,global_step, sample_prompt, vq_model, teacher_model, mask_schedule,mask_token_id, sample_steps=16)
                                 # del vq_model
                             if global_step % args.checkpointing_steps == 0:
@@ -2106,7 +2122,7 @@ def main(args):
                     accelerator.log(logs, step=global_step)
 
                     if global_step >= args.max_train_steps:
-                        print("global_step",global_step)    
+                        print("global_step",global_step)
                         print("args.max_train_steps",args.max_train_steps)
                         break
 
@@ -2175,7 +2191,7 @@ def main(args):
             loss_values = None
             loss_lm_values = None
             loss_mmu_values = None
-            
+
             # 清理优化器状态和梯度
             optimizer.zero_grad(set_to_none=True)  # 确保梯度被清零
             if hasattr(optimizer, 'state'):

@@ -1,0 +1,32 @@
+compute_environment: LOCAL_MACHINE
+deepspeed_config:
+  deepspeed_multinode_launcher: standard
+  gradient_accumulation_steps: 1
+  offload_optimizer_device: cpu  # 或 nvme，如果使用高速存储设备
+  offload_param_device: cpu  # 将参数也转移到 CPU
+  zero3_init_flag: true
+  zero_stage: 3  # 启用 ZeRO Stage 3
+  zero_optimization:
+    offload_optimizer:
+      device: cpu  # 或 nvme
+      pin_memory: true  # 为优化器分配固定内存
+    offload_param:
+      device: cpu  # 或 nvme
+      pin_memory: true  # 为参数分配固定内存
+    overlap_comm: true  # 启用通信与计算重叠
+    reduce_bucket_size: 5e8  # 减少 bucket 大小以优化性能
+    stage3_prefetch_bucket_size: 5e7  # 提前加载的数据大小
+    stage3_param_persistence_threshold: 1e7  # 仅对大于此阈值的参数进行分片
+distributed_type: DEEPSPEED
+downcast_bf16: 'no'
+machine_rank: 0
+main_training_function: main
+mixed_precision: bf16  # 使用混合精度
+num_machines: 1
+num_processes: 2
+rdzv_backend: static
+same_network: true
+tpu_env: []
+tpu_use_cluster: false
+tpu_use_sudo: false
+use_cpu: false
