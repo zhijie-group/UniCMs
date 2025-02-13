@@ -103,8 +103,7 @@ sh inference_t2i_256.sh
 
 
 ```bash
-cd train_script
-sh train512.sh
+sh train_script/train512.sh
 ```
 
 
