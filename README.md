@@ -114,7 +114,7 @@ sh inference_mmu_256.sh
 ```
 
 <p align="center">
-<img src="docs/mmu.png" width="75%"> <!-- Adjust image size as needed -->
+<img src="docs/mmu.png" width="100%"> <!-- Adjust image size as needed -->
 </p>
 
 #### Text-to-Image Generation
@@ -128,11 +128,11 @@ sh inference_t2i_256.sh
 ```
 
 <p align="center">
-<img src="docs/t2i_512.png" width="75%">  <!-- Example output for 512-res -->
+<img src="docs/t2i_512.png" width="100%">  <!-- Example output for 512-res -->
 </p>
 
 <p align="center">
-<img src="docs/t2i.png" width="75%">  <!-- Example output for 256-res -->
+<img src="docs/t2i.png" width="100%">  <!-- Example output for 256-res -->
 </p>
 
 <br>
