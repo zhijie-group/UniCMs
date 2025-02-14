@@ -1,6 +1,6 @@
 python sample_t2i.py \
---ck_path /home/chenkai/data/g3_data/showo_mcllm_final8-2_phase2_lr1e-5/checkpoint-27000 \
---config_file_path /home/chenkai/data/Show-o-Turbo/config/showo_256.yaml \
+--ck_path Show-o-Turbo-256 \
+--config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 2 \
 --guidance_scale 0 \
@@ -9,8 +9,8 @@ python sample_t2i.py \
 
 
 python sample_t2i.py \
---ck_path /home/chenkai/data/g3_data/showo_mcllm_final8-2_phase2_lr1e-5/checkpoint-27000 \
---config_file_path /home/chenkai/data/Show-o-Turbo/config/showo_256.yaml \
+--ck_path Show-o-Turbo-256 \
+--config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 4 \
 --guidance_scale 0 \
@@ -18,16 +18,16 @@ python sample_t2i.py \
 --output_path output_4.png
 
 python sample_t2i.py \
---ck_path /home/chenkai/data/g3_data/showo_mcllm_final8-2_phase2_lr1e-5/checkpoint-27000 \
---config_file_path /home/chenkai/data/Show-o-Turbo/config/showo_256.yaml \
+--ck_path Show-o-Turbo-256 \
+--config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 8 \
 --guidance_scale 0 \
 --output_path output_8.png
 
 python sample_t2i.py \
---ck_path /home/chenkai/data/g3_data/showo_mcllm_final8-2_phase2_lr1e-5/checkpoint-27000 \
---config_file_path /home/chenkai/data/Show-o-Turbo/config/showo_256.yaml \
+--ck_path Show-o-Turbo-256 \
+--config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 16 \
 --guidance_scale 0 \
