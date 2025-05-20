@@ -1389,9 +1389,7 @@ def main(args):
 
     # teacher_model=distributed_model("teacher_transformer",weight_dtype,config,args)
     teacher_model = Showo.from_pretrained(args.pretrained_teacher_model)
-    # print(os.system("gpustat"))
-    # teacher_model=load_checkpoint_and_dispatch(teacher_model,
-    #     checkpoint="/home/xck/data/models/showo/show-o/pytorch_model.safetensors",device_map="balanced_low_0",no_split_module_classes=no_split_module)
+    
     teacher_model.requires_grad_(False)
     teacher_model.eval()
     teacher_model.to(accelerator.device).to(weight_dtype)
@@ -1496,7 +1494,7 @@ def main(args):
             param.data = param.to(torch.float32)
 
 
-    # ck_path="/home/xck/data/ckpt/showo_softlabel_linebias20_0004002_1e-5/checkpoint-5800"
+    # ck_path=""
     # input_dir=ck_path+"/model"
     # load_model = Showo.from_pretrained(input_dir)
     # model.register_to_config(**load_model.config)
@@ -1538,7 +1536,7 @@ def main(args):
                 print("input_dir",input_dir)
                 # load diffusers style into model
 
-                load_model = Showo.from_pretrained("/data/xck/models/showo/show-o")
+                load_model = Showo.from_pretrained("")
                 peft_config = LoraConfig.from_pretrained(input_dir)
                 load_model = PeftModel.from_pretrained(load_model,input_dir, config=peft_config)
                 model.register_to_config(**load_model.config)

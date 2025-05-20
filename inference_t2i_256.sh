@@ -1,5 +1,5 @@
 python sample_t2i.py \
---ck_path Show-o-Turbo-256 \
+--ck_path UniCMs-256 \
 --config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 2 \
@@ -9,7 +9,7 @@ python sample_t2i.py \
 
 
 python sample_t2i.py \
---ck_path Show-o-Turbo-256 \
+--ck_path UniCMs-256 \
 --config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 4 \
@@ -18,7 +18,7 @@ python sample_t2i.py \
 --output_path output_4.png
 
 python sample_t2i.py \
---ck_path Show-o-Turbo-256 \
+--ck_path UniCMs-256 \
 --config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 8 \
@@ -26,7 +26,7 @@ python sample_t2i.py \
 --output_path output_8.png
 
 python sample_t2i.py \
---ck_path Show-o-Turbo-256 \
+--ck_path UniCMs-256 \
 --config_file_path config/showo_256.yaml \
 --prompt "A sleek, futuristic sports car with sharp, aerodynamic lines, gliding on a smooth, empty road. The car's polished metallic surface gleams under the soft golden sunlight, highlighting its sharp curves and aerodynamic design. The background is a soft blur of green grass and a distant horizon, allowing the car to remain the focal point of the scene." \
 --inference_step 16 \

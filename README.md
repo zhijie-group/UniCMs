@@ -60,31 +60,18 @@ UniCMs demonstrates substantial speed improvements in both text-to-image and ima
 
 ### 512-Resolution Model
 
-*   **Text-to-Image Generation:**  The 512-resolution UniCMs surpasses Show-o's 8-step sampling performance with just 4 steps, and outperforms Show-o's 4-step sampling with only 2 steps.
+*   **Text-to-Image Generation:**  The 512-resolution T2I of UniCMs.
 
     <p align="center">
     <img src="docs/t2i_result_512.png" width="80%"> <!-- Adjust width as needed -->
     </p>
 
-*   **Multimodal Understanding:**  The 512-resolution model achieves approximately 1.5x faster inference with minimal performance degradation.
+*   **Multimodal Understanding:**  The 512-resolution MMU of UniCMs.
 
     <p align="center">
     <img src="docs/mmu_result_512.png" width="80%">
     </p>
 
-### 256-Resolution Model
-
-*   **Text-to-Image Generation:** The 256-resolution UniCMs achieves performance close to Show-o's 8-step sampling at 4 steps, and surpasses Show-o's 4-step sampling at 2-step sampling.
-
-    <p align="center">
-    <img src="docs/t2i_result.png" width="80%">
-    </p>
-
-*   **Multimodal Understanding:** The 256-resolution model is about 1.5 times faster without much performance loss.
-
-    <p align="center">
-    <img src="docs/mmu_result.png" width="80%">
-    </p>
 
 <br>
 
@@ -131,9 +118,6 @@ sh inference_t2i_256.sh
 <img src="docs/t2i_512.png" width="100%">  <!-- Example output for 512-res -->
 </p>
 
-<p align="center">
-<img src="docs/t2i.png" width="100%">  <!-- Example output for 256-res -->
-</p>
 
 <br>
 

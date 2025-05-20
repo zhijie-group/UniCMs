@@ -11,11 +11,11 @@ MODEL_DIR=/showlab/show-o
 MODEL_DIR2=/showlab/show-o
 
 CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --config_file configs/8_gpus_deepspeed_zero3.yaml \
-  --main_process_port 29537 --num_processes 4  Show-o-Turbo/train_script/train512.py \
+  --main_process_port 29537 --num_processes 4  UniCMs/train_script/train512.py \
   --pretrained_teacher_model=$MODEL_DIR \
   --pretrained_student_model=$MODEL_DIR2 \
-  --image_dir="image/showo_turbo" \
-  --output_dir="ckpt/showo_turbo" \
+  --image_dir="image/UniCMs" \
+  --output_dir="ckpt/UniCMs" \
   --num_train_inferences=4 \
   --lr_scheduler="constant" \
   --mixed_precision=fp16 \

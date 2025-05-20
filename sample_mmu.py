@@ -30,9 +30,7 @@ SYSTEM_PROMPT_LEN = 28
 IGNORE_INDEX = -100
 # EOT_TOKEN = "<|EOT|>"
 
-# config_file_path = '/home/chenkai/data/Show-o/configs/showo_demo.yaml'  # config file path, you might need to change this path
-# config = OmegaConf.load(config_file_path)
-# image_prefix = "/home/chenkai/data/g3_dataset/llava_train_image/val2014/COCO_val2014_"  # image prefix, you might need to change this path
+
 
 
 def create_attention_mask_for_mmu(sequence, eoi_id=128258, return_inverse_mask=True):
@@ -253,7 +251,7 @@ if __name__ == "__main__":
                         help="Maximum new tokens per Jacobi iteration")
     parser.add_argument("--max_new_seq_len", type=int, default=512,
                         help="Maximum total sequence length")
-    parser.add_argument("--model_path",type=str,help="the Show-o-Turbo model path")
+    parser.add_argument("--model_path",type=str,help="the UniCMs model path")
     parser.add_argument("--config_path",type=str,help="the Show-o config file, specially, the magvitv2 model load from this config file ")
     args = parser.parse_args()
     device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")

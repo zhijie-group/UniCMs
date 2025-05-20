@@ -241,7 +241,7 @@ def inference(config_file_path, ck_path, prompt, inference_step, guidance_scale,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Text-to-image inference using Show-o model.")
-    parser.add_argument("--config_file_path", type=str, default='/home/chenkai/data/Show-o-Turbo/config/showo_512.yaml', help="path to config file")
+    parser.add_argument("--config_file_path", type=str, default='UniCMs/config/showo_512.yaml', help="path to config file")
     parser.add_argument("--ck_path", type=str, required=True, help="path to model checkpoint")
     parser.add_argument("--prompt", type=str, required=True, help="text prompt for image generation")
     parser.add_argument("--inference_step", type=int, default=20, help="number of inference steps")
