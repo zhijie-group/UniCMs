@@ -2,7 +2,7 @@
 
 <img src="docs/title.png" width="200"> <!-- Slightly larger logo -->
 
-### Show-o Turbo: Towards Accelerated Unified Multimodal Understanding and Generation
+### UniCMs: A Unified Consistency Model For Efficient Multimodal Generation and Understanding
 
 <!-- Authors and affiliations with improved formatting -->
 Chenkai Xu<sup>1*</sup>, Xu Wang<sup>1*</sup>, Zhenyi Liao<sup>1</sup>, Yishun Li<sup>2</sup>, Tianqi Hou<sup>3</sup>, Zhijie Deng<sup>1†</sup><br>
@@ -15,8 +15,8 @@ Chenkai Xu<sup>1*</sup>, Xu Wang<sup>1*</sup>, Zhenyi Liao<sup>1</sup>, Yishun L
 
 <!-- Badges with more spacing and consistent style -->
 [![ArXiv](https://img.shields.io/badge/ArXiv-2502.05415-B31B1B.svg?style=flat-square)](https://arxiv.org/abs/2502.05415) &nbsp;
-[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Show--o--Turbo--256-FFD700.svg?style=flat-square&logo=hugging-face)](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-256) &nbsp;
-[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Show--o--Turbo--512-FFD700.svg?style=flat-square&logo=hugging-face)](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-512)
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-UniCMs--256-FFD700.svg?style=flat-square&logo=hugging-face)](https://huggingface.co/SJTU-Deng-Lab/UniCMs-256) &nbsp;
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-UniCMs--512-FFD700.svg?style=flat-square&logo=hugging-face)](https://huggingface.co/SJTU-Deng-Lab/UniCMs-512)
 
 </div>
 
@@ -26,14 +26,14 @@ Chenkai Xu<sup>1*</sup>, Xu Wang<sup>1*</sup>, Zhenyi Liao<sup>1</sup>, Yishun L
 
 <!-- Use a bulleted list with bold dates for better readability -->
 
-*   **[2024-11-29]** We release a [256-resolution version of the weights](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-256) for Show-o Turbo on Hugging Face.
-*   **[2025-2-12]** We release a [512-resolution version of the weights](https://huggingface.co/SJTU-Deng-Lab/Show-o-Turbo-512) for Show-o Turbo on Hugging Face.
+*   **[2024-11-29]** We release a [256-resolution version of the weights](https://huggingface.co/SJTU-Deng-Lab/UniCMs-256) for UniCMs on Hugging Face.
+*   **[2025-2-12]** We release a [512-resolution version of the weights](https://huggingface.co/SJTU-Deng-Lab/UniCMs-512) for UniCMs on Hugging Face.
 
 <br>
 
-## What's New about Show-o Turbo?
+## What's New about UniCMs?
 
-Show-o Turbo builds upon Show-o to address its inefficiency issues in both image and text generation. While Show-o relies on progressive denoising for images and autoregressive decoding for text, Show-o Turbo introduces a unified denoising perspective for both modalities, leading to significantly faster generation speeds.  Show-o Turbo achieves this through several key innovations:
+UniCMs is a unified consistency model that solves the problem of low generation efficiency in unified models across various multimodal tasks. UniCMs significantly accelerates generation speed by using discrete diffusion for image modeling and introducing parallel decoding into autoregressive text modeling, thereby establishing a unified denoising perspective for both modalities. UniCMs achieves this goal through the following key innovations:
 
 <br>
 
@@ -45,22 +45,22 @@ Show-o Turbo builds upon Show-o to address its inefficiency issues in both image
 
 <!-- Use a bulleted list with more descriptive points -->
 
-*   **Unified Denoising:** Show-o Turbo leverages parallel text decoding techniques (Jacobi decoding) to reframe text generation as a denoising process, mirroring image generation. This creates a unified perspective where both modalities are treated as denoising trajectories.
-*   **Consistency Distillation:** Inspired by acceleration techniques in diffusion models, Show-o Turbo employs consistency distillation to significantly shorten these multimodal denoising trajectories. This results in much faster content generation.
-*   **Trajectory Segmentation and Curriculum Learning:** To improve training convergence, Show-o Turbo adopts a staged training approach.  This involves progressively decreasing trajectory segments and incorporating curriculum learning.
-*   **Top-k Sampling:** To enhance the quality of generated samples, particularly when using fewer sampling steps, Show-o Turbo incorporates top-k sampling during the inference phase.
+*   **Unified Denoising:** UniCMs leverages parallel text decoding techniques (Jacobi decoding) to reframe text generation as a denoising process, mirroring image generation. This creates a unified perspective where both modalities are treated as denoising trajectories.
+*   **Consistency Distillation:** Inspired by acceleration techniques in diffusion models, UniCMs employs consistency distillation to significantly shorten these multimodal denoising trajectories. This results in much faster content generation.
+*   **Trajectory Segmentation and Curriculum Learning:** To improve training convergence, UniCMs adopts a staged training approach.  This involves progressively decreasing trajectory segments and incorporating curriculum learning.
+*   **Top-k Sampling:** To enhance the quality of generated samples, particularly when using fewer sampling steps, UniCMs incorporates top-k sampling during the inference phase.
 
 <br>
 
 ## Results
 
-Show-o Turbo demonstrates substantial speed improvements in both text-to-image and image-to-text generation, all while maintaining performance levels comparable to Show-o.  **Importantly, we are releasing models for both 256 and 512 resolutions.**
+UniCMs demonstrates substantial speed improvements in both text-to-image and image-to-text generation.  **Importantly, we are releasing models for both 256 and 512 resolutions.**
 
 <!-- Use headings for different result sections -->
 
 ### 512-Resolution Model
 
-*   **Text-to-Image Generation:**  The 512-resolution Show-o Turbo surpasses Show-o's 8-step sampling performance with just 4 steps, and outperforms Show-o's 4-step sampling with only 2 steps.
+*   **Text-to-Image Generation:**  The 512-resolution UniCMs surpasses Show-o's 8-step sampling performance with just 4 steps, and outperforms Show-o's 4-step sampling with only 2 steps.
 
     <p align="center">
     <img src="docs/t2i_result_512.png" width="80%"> <!-- Adjust width as needed -->
@@ -74,7 +74,7 @@ Show-o Turbo demonstrates substantial speed improvements in both text-to-image a
 
 ### 256-Resolution Model
 
-*   **Text-to-Image Generation:** The 256-resolution Show-o Turbo achieves performance close to Show-o's 8-step sampling at 4 steps, and surpasses Show-o's 4-step sampling at 2-step sampling.
+*   **Text-to-Image Generation:** The 256-resolution UniCMs achieves performance close to Show-o's 8-step sampling at 4 steps, and surpasses Show-o's 4-step sampling at 2-step sampling.
 
     <p align="center">
     <img src="docs/t2i_result.png" width="80%">
@@ -93,9 +93,9 @@ Show-o Turbo demonstrates substantial speed improvements in both text-to-image a
 First, create and activate the Conda environment:
 
 ```bash
-conda create -n Show-o-Turbo python=3.8
-conda activate Show-o-Turbo  # Activate the environment
-cd Show-o-Turbo
+conda create -n UniCMs python=3.8
+conda activate UniCMs  # Activate the environment
+cd UniCMs
 pip3 install -r requirements.txt
 ```
 
@@ -158,15 +158,15 @@ sh train_script/train512.sh
 
 ## Contributing
 
-We warmly welcome contributions to Show-o Turbo!  If you have suggestions for new features or improvements, please open an issue or submit a pull request. Your contributions are highly appreciated!
+We warmly welcome contributions to UniCMs!  If you have suggestions for new features or improvements, please open an issue or submit a pull request. Your contributions are highly appreciated!
 
 <br>
 
 ## Citation
 
 ```bibtex
-@misc{xu2025showoturboacceleratedunified,
-      title={Show-o Turbo: Towards Accelerated Unified Multimodal Understanding and Generation}, 
+@misc{xu2025unicmsunifiedconsistencymodel,
+      title={UniCMs: A Unified Consistency Model For Efficient Multimodal Generation and Understanding}, 
       author={Chenkai Xu and Xu Wang and Zhenyi Liao and Yishun Li and Tianqi Hou and Zhijie Deng},
       year={2025},
       eprint={2502.05415},
@@ -180,4 +180,4 @@ We warmly welcome contributions to Show-o Turbo!  If you have suggestions for ne
 
 ## Acknowledgments
 
-We extend our sincere gratitude to the authors of Show-o and the developers of the essential libraries and frameworks that underpin Show-o Turbo.  This includes, but is not limited to: open-muse, Phi-1.5, maskgit, taming-transformers, transformers, accelerate, and diffusers.  We deeply appreciate the invaluable contributions of all the authors.
+We extend our sincere gratitude to the authors of Show-o and the developers of the essential libraries and frameworks that underpin UniCMs.  This includes, but is not limited to: open-muse, Phi-1.5, maskgit, taming-transformers, transformers, accelerate, and diffusers.  We deeply appreciate the invaluable contributions of all the authors.
